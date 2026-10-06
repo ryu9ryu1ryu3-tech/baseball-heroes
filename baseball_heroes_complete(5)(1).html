@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>⚾ ベースボールヒーローズ 本格派・軽量版</title>
+<style>
+:root{--bg:#0d1422;--card:#172235;--card2:#202f47;--text:#f4f7fb;--muted:#aebbd0;--accent:#38bdf8;--gold:#fbbf24;--red:#fb7185;--green:#4ade80}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1220,#101a2d);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif}
+#app{max-width:720px;margin:auto;padding:14px 12px 32px}.top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}
+h1{font-size:20px;margin:0}.coins{background:#26354e;padding:9px 12px;border-radius:999px;font-weight:800;color:#fde68a}
+.card{background:var(--card);border:1px solid #2b3b56;border-radius:18px;padding:14px;margin:10px 0;box-shadow:0 8px 24px #0002}
+button{width:100%;min-height:48px;border:0;border-radius:13px;background:var(--card2);color:var(--text);font-size:15px;font-weight:800;padding:11px;margin-top:8px}
+button.primary{background:var(--accent);color:#07111d}button.gold{background:var(--gold);color:#241600}button.danger{background:#4b2330}button:disabled{opacity:.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid button{margin:0}
+.muted{color:var(--muted);font-size:13px}.title{font-size:17px;font-weight:900;margin-bottom:8px}
+.stat{display:flex;justify-content:space-between;border-bottom:1px solid #2b3b56;padding:8px 0}
+.player{padding:11px;border:1px solid #31425f;border-radius:13px;margin:7px 0;background:#142035}
+.badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:900;margin-right:5px;background:#334155}.s5{background:#7c3aed}.s4{background:#2563eb}.s3{background:#475569}
+.ability{display:inline-block;background:#263a57;border-radius:999px;padding:4px 7px;margin:3px;font-size:11px}
+.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}.nav button{font-size:12px;min-height:44px}
+.hidden{display:none}.center{text-align:center}.big{font-size:30px;font-weight:1000}
+select,input{width:100%;padding:12px;border-radius:11px;border:1px solid #33455f;background:#101a2b;color:white;font-size:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px;border-bottom:1px solid #2d3d56}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><h1>⚾ ベースボールヒーローズ</h1><div class="coins">💰 <span id="coins">5000</span></div></div>
+  <main id="main"></main>
+  <div class="nav">
+    <button data-page="home">🏠 ホーム</button><button data-page="match">⚾ 試合</button><button data-page="success">🔥 サクセス</button>
+    <button data-page="mylife">👤 マイライフ</button><button data-page="pennant">🏆 ペナント</button><button data-page="gacha">🎰 ガチャ</button>
+    <button data-page="collection">📖 図鑑</button><button data-page="localbattle">⚔️ ローカル対戦</button><button data-page="trade">🔄 交換</button><button data-page="save">💾 セーブ</button>
+  </div>
+</div>
+<script>
+const abilities=[
+"灼熱スイング","竜巻バット","必中ゾーン","電光一閃","英雄の一撃","疾風ランナー","磁石グラブ","黒豹ステップ","瞬速ターン",
+"星落とし","幻惑軌道","雷撃ストレート","龍脈チェンジ","黒夜の魔球","英雄覚醒","限界突破魂","奇跡の連鎖","王者の風格","不屈の魂","スターオーラ"
+];
+const surn=["青木","秋山","石川","伊藤","上田","大川","岡田","加藤","川上","木村","小林","斎藤","佐々木","佐藤","鈴木","高橋","田中","中川","中村","西田","野口","橋本","藤井","松本","三浦","森","山口","山下","吉田","渡辺"];
+const given=["蓮","翔","悠真","大翔","颯太","陸","陽斗","湊","蒼","直樹","健太","翼","拓海","海斗","蓮斗","優斗","駿","智也","和真","一輝"];
+let state=JSON.parse(localStorage.getItem("bh_state")||"null")||{coins:5000,owned:[],created:[],my:{games:0,hits:0,hr:0,coins:0},pennant:{g:0,w:0,l:0,coins:0},success:{week:1,xp:0,power:55,tech:55,speed:55,def:55,abilities:[]}};
+let players=[];
+function rng(n){return Math.floor(Math.random()*n)}
+function makePlayers(){
+ for(let i=0;i<200;i++){
+  let r=i<10?5:i<40?4:3, pos=["投手","捕手","一塁","二塁","三塁","遊撃","外野"][rng(7)];
+  let base=r===5?78:r===4?66:50;
+  let p={id:"P"+String(i+1).padStart(3,"0"),name:surn[rng(surn.length)]+" "+given[rng(given.length)],rarity:r,pos,
+  power:Math.min(99,base+rng(18)),tech:Math.min(99,base+rng(18)),speed:Math.min(99,base+rng(18)),def:Math.min(99,base+rng(18)),
+  abilities:[]};
+  let n=r===5?5+rng(6):r===4?3+rng(4):1+rng(3);
+  for(let j=0;j<n;j++){let a=abilities[rng(abilities.length)];if(!p.abilities.includes(a))p.abilities.push(a)}
+  players.push(p);
+ }
+}
+makePlayers();
+function save(){localStorage.setItem("bh_state",JSON.stringify(state));document.getElementById("coins").textContent=state.coins}
+function playerById(id){return players.find(p=>p.id===id)}
+function card(p){
+ return `<div class="player"><b>${p.name}</b> <span class="badge s${p.rarity}">★${p.rarity}</span><span class="muted">${p.pos}</span>
+ <div class="muted">打 ${p.power} / 技 ${p.tech} / 走 ${p.speed} / 守 ${p.def}</div>
+ <div>${p.abilities.map(a=>`<span class="ability">${a}</span>`).join("")}</div></div>`;
+}
+function render(page="home"){
+ document.getElementById("coins").textContent=state.coins;
+ const m=document.getElementById("main");
+ if(page==="home")m.innerHTML=`<div class="card center"><div class="big">⚾</div><div class="title">本格派・軽量版</div><div class="muted">200人のオリジナル選手＋ガチャ＋育成＋ペナント</div></div>
+ <div class="card"><div class="title">🎮 すぐ遊ぶ</div><div class="grid"><button class="primary" onclick="render('match')">⚾ 試合</button><button onclick="render('gacha')">🎰 ガチャ</button><button onclick="render('success')">🔥 サクセス</button><button onclick="render('pennant')">🏆 ペナント</button></div></div>
+ <div class="card"><div class="title">✨ 現在のデータ</div><div class="stat"><span>所持選手</span><b>${state.owned.length}</b></div><div class="stat"><span>作成選手</span><b>${state.created.length}</b></div><div class="stat"><span>ペナント</span><b>${state.pennant.w}勝${state.pennant.l}敗</b></div></div>`;
+ else if(page==="match")renderMatch(m);
+ else if(page==="gacha")renderGacha(m);
+ else if(page==="collection")renderCollection(m);
+ else if(page==="localbattle")renderLocalBattle(m);
+ else if(page==="pennant")renderPennant(m);
+ else if(page==="success")renderSuccess(m);
+ else if(page==="mylife")renderMylife(m);
+ else if(page==="trade")renderTrade(m);
+ else if(page==="save")renderSave(m);
+}
+function renderMatch(m){m.innerHTML=`<div class="card"><div class="title">⚾ 1試合</div><p class="muted">勝利で500コイン、参加で200コイン。</p><button class="primary" id="matchBtn">試合開始</button><div id="matchOut"></div></div>`;document.getElementById("matchBtn").onclick=()=>{let win=Math.random()<.58;state.coins+=win?700:200;state.my.games++;if(win)state.my.hits+=1;save();document.getElementById("matchOut").innerHTML=`<div class="card center"><div class="big">${win?"🎉 勝利！":"😣 敗北…"}</div><p>${win?"+700":"参加 +200"}コイン</p></div>`}}
+function pull(n){
+ let got=[];for(let i=0;i<n;i++){let x=Math.random()*100,r=x<5?5:x<20?4:3;let pool=players.filter(p=>p.rarity===r);let p=pool[rng(pool.length)];got.push(p);if(!state.owned.includes(p.id))state.owned.push(p.id)}
+ state.coins-=n===10?2700:300;save();return got;
+}
+function renderGacha(m){m.innerHTML=`<div class="card"><div class="title">🎰 オリジナル選手ガチャ</div><p class="muted">★5 5% / ★4 15% / ★3 80%。全200選手。</p><div class="grid"><button class="gold" id="one">1回 300💰</button><button class="gold" id="ten">10回 2700💰</button></div><div id="gout"></div></div><div class="card"><b>💰 コインを集める</b><p class="muted">試合参加 +200 / 勝利 +500相当 / サクセスイベント +300 / 初期ボーナスで遊びやすく設定。</p></div>`;
+ const out=document.getElementById("gout");document.getElementById("one").onclick=()=>{if(state.coins<300)return alert("コイン不足");out.innerHTML=pull(1).map(card).join("")};document.getElementById("ten").onclick=()=>{if(state.coins<2700)return alert("コイン不足");out.innerHTML=pull(10).map(card).join("")}}
+function renderCollection(m){let list=state.owned.map(playerById).filter(Boolean);m.innerHTML=`<div class="card"><div class="title">📖 選手図鑑</div><p class="muted">${list.length}/200人獲得</p>${list.slice().reverse().map(card).join("")||"まだ選手がいません。ガチャへ！"}</div>`}
+function renderLocalBattle(m){
+ let owned=state.owned.map(playerById).filter(Boolean);
+ let roster=owned.length?owned:players.slice(0,5);
+ const enc=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+ const dec=t=>{try{return JSON.parse(decodeURIComponent(escape(atob(t.trim()))))}catch(e){return null}};
+ const pick=()=>roster[rng(roster.length)];
+ const score=(a,b,seed)=>{
+   let x=(seed>>>0)||1;
+   const rand=()=>{x=(1664525*x+1013904223)>>>0;return x/4294967296};
+   const power=p=>(p.power||50)*1.35+(p.tech||50)*.55+(p.speed||50)*.35+(p.def||50)*.3+(p.abilities||[]).length*9+(p.rarity||3)*12;
+   const pa=power(a),pb=power(b);
+   let as=0,bs=0,log=[];
+   for(let i=1;i<=6;i++){
+     const ca=Math.max(.15,Math.min(.9,.5+(pa-pb)/250+(rand()-.5)*.18));
+     const cb=Math.max(.15,Math.min(.9,.5+(pb-pa)/250+(rand()-.5)*.18));
+     if(rand()<ca)as+=rand()<.25?2:1;
+     if(rand()<cb)bs+=rand()<.25?2:1;
+     log.push("第"+i+"回："+as+" - "+bs);
+   }
+   return {as,bs,log};
+ };
+ function selectPage(mode){
+   out.innerHTML=`<div class="card"><b>${mode==="host"?"自分":"相手"}の選手を選択</b><div id="choices" class="grid"></div></div>`;
+   const c=document.getElementById("choices");
+   roster.slice(0,12).forEach(p=>{
+     const b=document.createElement("button");
+     b.innerHTML=`<b>${p.name}</b><br>★${p.rarity||3}　${p.position||"選手"}<br>総合 ${Math.round((p.power||50)+(p.tech||50)/2+(p.speed||50)/3)}`;
+     b.onclick=()=>mode==="host"?createHost(p):createGuest(p);
+     c.appendChild(b);
+   });
+ }
+ function createHost(my){
+   const seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
+   const pack={v:2,type:"BH_LOCAL_HOST",seed,player:my};
+   const code=enc(pack);
+   out.innerHTML=`<div class="card"><b>🟦 あなたの対戦コード</b>
+   <textarea id="hostcode" rows="5" readonly>${code}</textarea>
+   <button id="copy">📋 コピー</button>
+   <p class="muted">このコードを相手に送ってください。相手は「参加コード」を作って返します。</p></div>
+   <div class="card"><b>🟩 相手の参加コードを貼る</b><textarea id="reply" rows="5" placeholder="相手から返ってきたコード"></textarea><button class="primary" id="start">⚔️ 対戦結果を確定</button></div>`;
+   document.getElementById("copy").onclick=async()=>{try{await navigator.clipboard.writeText(code);alert("コピーしました")}catch(e){alert("長押ししてコピーしてください")}};
+   document.getElementById("start").onclick=()=>{
+     const r=dec(document.getElementById("reply").value);
+     if(!r||r.type!=="BH_LOCAL_GUEST"||r.seed!==seed||!r.player){alert("参加コードが正しくありません");return}
+     showResult(my,r.player,seed);
+   };
+ }
+ function createGuest(enemy){
+   const codePrompt=`相手のホストコードを貼り付けてください`;
+   out.innerHTML=`<div class="card"><b>🟥 ホストコード</b><textarea id="hostin" rows="5" placeholder="${codePrompt}"></textarea><button class="primary" id="make">参加コードを作る</button></div>`;
+   document.getElementById("make").onclick=()=>{
+     const h=dec(document.getElementById("hostin").value);
+     if(!h||h.type!=="BH_LOCAL_HOST"||!h.player||!h.seed){alert("ホストコードが正しくありません");return}
+     const pack={v:2,type:"BH_LOCAL_GUEST",seed:h.seed,player:enemy};
+     const code=enc(pack);
+     out.innerHTML=`<div class="card"><b>🟥 あなたの参加コード</b><textarea id="guestcode" rows="5" readonly>${code}</textarea><button id="copyg">📋 コピー</button><p class="muted">このコードをホスト側へ送ってください。</p></div>`;
+     document.getElementById("copyg").onclick=async()=>{try{await navigator.clipboard.writeText(code);alert("コピーしました")}catch(e){alert("長押ししてコピーしてください")}};
+   };
+ }
+ function showResult(a,b,seed){
+   const r=score(a,b,seed);
+   let reward=r.as>r.bs?500:r.as===r.bs?250:0;
+   if(reward){state.coins+=reward;save()}
+   out.innerHTML=`<div class="card center"><div class="muted">⚔️ 対戦結果</div><div class="title">${a.name} VS ${b.name}</div><div class="big">${r.as} - ${r.bs}</div>
+   <p>${r.as>r.bs?"🏆 あなたの勝利！":r.as<r.bs?"😣 あなたの敗北…":"🤝 引き分け！"}</p>
+   <p class="muted">同じ対戦コードなら、2台とも同じ結果になります。</p>
+   <div class="card">${r.log.map(x=>`<div class="stat">${x}</div>`).join("")}</div>
+   <p>${reward?"💰 報酬 +"+reward+"コイン":""}</p><button id="back">もう一度対戦</button></div>`;
+   document.getElementById("back").onclick=()=>render("localbattle");
+ }
+ m.innerHTML=`<div class="card">
+ <div class="title">⚔️ ローカル対戦</div>
+ <p class="muted">2台のスマホでコードを交換して対戦。サーバー不要・同じ結果を再現できます。</p>
+ <div class="grid"><button class="primary" id="host">🟦 ホストになる</button><button id="guest">🟥 参加する</button></div>
+ </div>
+ <div class="card"><div class="title">📱 遊び方</div>
+ <div class="stat"><span>1</span><b>ホストが選手を選んでコード作成</b></div>
+ <div class="stat"><span>2</span><b>コードを相手へ送る</b></div>
+ <div class="stat"><span>3</span><b>参加側が選手を選び、参加コード作成</b></div>
+ <div class="stat"><span>4</span><b>参加コードをホストへ返す</b></div>
+ <div class="stat"><span>5</span><b>ホストが結果確定 → 2人とも同じ結果</b></div></div>`;
+ const out=document.createElement("div");out.id="lbout";m.appendChild(out);
+ document.getElementById("host").onclick=()=>selectPage("host");
+ document.getElementById("guest").onclick=()=>selectPage("guest");
+}
+function renderPennant(m){
+ let p=state.pennant, ended=p.g>=20;
+ m.innerHTML=`<div class="card"><div class="title">🏆 サクッとペナント</div><p class="muted">20試合で1シーズン終了。特殊能力の強い選手ほど勝ちやすい。</p>
+ <div class="stat"><span>試合</span><b>${p.g}/20</b></div><div class="stat"><span>成績</span><b>${p.w}勝 ${p.l}敗</b></div>
+ <div class="grid"><button class="primary" id="next" ${ended?"disabled":""}>⚾ 次の試合</button><button id="fast" ${ended?"disabled":""}>⚡ 20試合一気に</button></div><div id="pout"></div></div>
+ <div class="card"><div class="title">順位表</div><table><tr><th>順位</th><th>チーム</th><th>勝点</th></tr><tr><td>1</td><td>🔥 ヒーローズ</td><td>${p.w*3}</td></tr><tr><td>2</td><td>🌟 スターズ</td><td>${Math.max(0,60-p.w*3)}</td></tr><tr><td>3</td><td>⚡ サンダー</td><td>${Math.max(0,55-p.l*2)}</td></tr></table></div>
+ <button class="danger" id="newSeason">🔄 新シーズン</button>`;
+ function one(){if(p.g>=20)return; p.g++;let win=Math.random()<.58;p[win?"w":"l"]++;p.coins+=win?700:200;state.coins+=win?700:200;save();document.getElementById("pout").innerHTML=`<div class="card center"><div class="big">${win?"🎉 勝利":"😣 敗北"}</div><p>第${p.g}戦 / ${p.w}勝${p.l}敗</p><p>試合報酬 +${win?700:200}コイン</p></div>`;if(p.g===20){let bonus=p.w>=14?5000:p.w>=10?3000:1000;state.coins+=bonus;p.coins+=bonus;save();document.getElementById("pout").innerHTML+=`<div class="card center"><div class="big">${p.w>=14?"🏆 優勝！":"シーズン終了"}</div><p>シーズン報酬 +${bonus}コイン</p></div>`;render("pennant")}}
+ document.getElementById("next").onclick=one;document.getElementById("fast").onclick=()=>{while(p.g<20)one();};document.getElementById("newSeason").onclick=()=>{state.pennant={g:0,w:0,l:0,coins:0};save();render("pennant")};
+}
+function renderSuccess(m){let s=state.success;m.innerHTML=`<div class="card"><div class="title">🔥 サクセス</div><p class="muted">4週間の育成。オリジナル特殊能力を獲得して選手を作ろう。</p><div class="stat"><span>週</span><b>${s.week}/4</b></div><div class="stat"><span>パワー</span><b>${s.power}</b></div><div class="stat"><span>技術</span><b>${s.tech}</b></div><div class="stat"><span>走力</span><b>${s.speed}</b></div><div class="stat"><span>守備</span><b>${s.def}</b></div><div class="grid"><button id="bat">🏋️ 打撃</button><button id="tech">🎯 技術</button><button id="run">🏃 走力</button><button id="def">🧤 守備</button></div><div id="sout"></div></div>`;function act(k){if(s.week>4)return;let gain=6+rng(7);s[k]+=gain;s.xp+=gain;s.week++;if(Math.random()<.45){let a=abilities[rng(abilities.length)];if(!s.abilities.includes(a))s.abilities.push(a)}state.coins+=300;save();document.getElementById("sout").innerHTML=`<div class="card">練習成功！ +${gain} / 💰 +300${s.abilities.length?`<br>✨ 特殊能力候補: ${s.abilities.join("、")}`:""}</div>`;if(s.week>4){state.created.push({name:"育成選手"+(state.created.length+1),rarity:5,pos:"遊撃",power:s.power,tech:s.tech,speed:s.speed,def:s.def,abilities:[...s.abilities]});save()}}["bat","tech","run","def"].forEach((id,i)=>document.getElementById(id).onclick=()=>act(["power","tech","speed","def"][i]))}
+function renderMylife(m){m.innerHTML=`<div class="card"><div class="title">👤 マイライフ</div><p class="muted">自分の選手としてシーズンを進める簡易版。</p><div class="stat"><span>出場試合</span><b>${state.my.games}</b></div><div class="stat"><span>ヒット</span><b>${state.my.hits}</b></div><button class="primary" id="ml">1試合進める</button><div id="mlout"></div></div>`;document.getElementById("ml").onclick=()=>{state.my.games++;let hit=Math.random()<.62;if(hit)state.my.hits++;state.coins+=hit?500:250;save();document.getElementById("mlout").innerHTML=`<div class="card">${hit?"🔥 ヒット！":"三振…"}<br>💰 +${hit?500:250}</div>`}}
+function renderTrade(m){m.innerHTML=`<div class="card"><div class="title">🔄 ローカル選手交換</div><p class="muted">2台の端末でデータを渡すためのコード交換。サーバー接続なし。</p><input id="tradeCode" placeholder="選手ID（例 P001）"><button class="primary" id="make">交換コードを作る</button><div id="tout"></div></div>`;document.getElementById("make").onclick=()=>{let id=document.getElementById("tradeCode").value.trim();let p=playerById(id);document.getElementById("tout").innerHTML=p?`<div class="card">共有する文字列：<b>${btoa(unescape(encodeURIComponent(JSON.stringify(p))))}</b><br><span class="muted">相手側では今後インポート機能を追加可能。</span></div>`:"そのIDの選手が見つかりません。"}}
+function renderSave(m){m.innerHTML=`<div class="card"><div class="title">💾 セーブ</div><p class="muted">この端末のブラウザに自動保存しています。</p><button class="primary" id="saveNow">今すぐ保存</button><button class="danger" id="resetAll">全データを初期化</button><div id="saveout"></div></div>`;document.getElementById("saveNow").onclick=()=>{save();document.getElementById("saveout").textContent="保存しました！"};document.getElementById("resetAll").onclick=()=>{if(confirm("本当に初期化しますか？")){localStorage.removeItem("bh_state");location.reload()}}}
+document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>render(b.dataset.page)));
+render();
+</script>
+</body>
+</html>
